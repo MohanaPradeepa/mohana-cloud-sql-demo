@@ -16,7 +16,7 @@ RUN cd /app && gradle clean build -x test
 FROM eclipse-temurin:21-jdk-jammy
 
 # Copy the JAR from the builder stage
-COPY --from=builder /app/build/libs/cloudsql-demo-0.0.1-SNAPSHOT.jar /app/app.jar
+COPY --from=builder /app/build/libs/*.jar /app/app.jar
 
 # Expose application port (optional, e.g., 8080)
 EXPOSE 8080
