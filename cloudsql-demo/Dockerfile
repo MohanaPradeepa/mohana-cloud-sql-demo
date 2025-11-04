@@ -1,25 +1,26 @@
-#FROM ubuntu:latest
-#LABEL authors="MPRADE11"
-#
-#ENTRYPOINT ["top", "-b"]
+# Multi-stage build for Google Cloud Run
+FROM eclipse-temurin:17-jdk-alpine AS build
 
-# Stage 1: Build the application -  multi stage docker for lean build
-FROM gradle:8.4-jdk17 AS builder
+WORKDIR /workspace/app
 
-# Copy project files to container
-COPY . /app
+COPY gradlew .
+COPY gradle gradle
+COPY build.gradle .
+COPY settings.gradle .
+COPY src src
 
-# Run Gradle build - no test done to minimise build time
-RUN cd /app && gradle clean build -x test
+RUN chmod +x gradlew
+RUN ./gradlew clean bootJar -x test
 
-# Stage 2: Run the application - trusted eclipse temurin image for slimmer faster and secure image
-FROM eclipse-temurin:21-jdk-jammy
+# Runtime stage
+FROM eclipse-temurin:17-jre-alpine
 
-# Copy the JAR from the builder stage
-COPY --from=builder /app/build/libs/*.jar /app/app.jar
+WORKDIR /app
 
-# Expose application port (optional, e.g., 8080)
+COPY --from=build /workspace/app/build/libs/*.jar app.jar
+
+# Cloud Run expects the application to listen on the PORT environment variable
+ENV PORT=8080
 EXPOSE 8080
 
-# Run the JAR
-ENTRYPOINT ["java", "-jar", "/app/app.jar"]
+ENTRYPOINT ["java", "-jar", "app.jar"]
